@@ -5,7 +5,7 @@ from flask import Flask
 import discord
 from discord.ext import commands, tasks
 
-# 1. FLASK KEEP-ALIVE SERVER
+# 1. FLASK KEEP-ALIVE SERVER (Prevents Render Inactivity Sleep)
 app = Flask('')
 
 @app.route('/')
@@ -16,7 +16,6 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# Start Flask on a background thread so it doesn't block the Discord bot
 threading.Thread(target=run_flask, daemon=True).start()
 
 
@@ -26,13 +25,13 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Fetch Channel ID from Environment Variable
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "123456789012345678"))
+# Target Channel ID
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "1554020108878217247"))
 
 # UTC-2 Server Timezone
 UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
 
-# Dynamic Weekly Schedule Matrix
+# Schedule Matrix
 WEEKLY_SCHEDULE = {
     0: {0: "Shelter Expansion", 4: "Hero Initiative", 8: "Unit Training", 12: "Age of Science", 16: "Arms Expert", 20: "Shelter Expansion"},
     1: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Shelter Expansion", 20: "Hero Initiative"},
@@ -42,6 +41,16 @@ WEEKLY_SCHEDULE = {
     5: {0: "Shelter Expansion", 4: "Hero Initiative", 8: "Unit Training", 12: "Age of Science", 16: "Arms Expert", 20: "Shelter Expansion"},
     6: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Shelter Expansion", 20: "Hero Initiative"}
 }
+
+# Exact alert execution times (5 minutes before 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC-2)
+ALERT_TIMES = [
+    datetime.time(hour=3, minute=55, tzinfo=UTC_MINUS_2),
+    datetime.time(hour=7, minute=55, tzinfo=UTC_MINUS_2),
+    datetime.time(hour=11, minute=55, tzinfo=UTC_MINUS_2),
+    datetime.time(hour=15, minute=55, tzinfo=UTC_MINUS_2),
+    datetime.time(hour=19, minute=55, tzinfo=UTC_MINUS_2),
+    datetime.time(hour=23, minute=55, tzinfo=UTC_MINUS_2)
+]
 
 def get_upcoming_event_details():
     now_local = datetime.datetime.now(UTC_MINUS_2)
@@ -69,12 +78,12 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Precision Part in Upgrades:** 600 pts / unit\n"
-                "• **Structure CP Increase:** 20 pts per 100 CP\n"
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
-                "• **Construction Acceleration:** 10 pts per 1-min speedup\n"
-                "• **Research Acceleration:** 10 pts per 1-min speedup"
+                "• **Precision Part in Upgrades:** 600 pts / unit\n"[cite: 1]
+                "• **Structure CP Increase:** 20 pts per 100 CP\n"[cite: 1]
+                "• **Tech CP Increase:** 20 pts per 100 CP\n"[cite: 1]
+                "• **Wisdom Medals Consumed:** 20 pts / medal\n"[cite: 1]
+                "• **Construction Acceleration:** 10 pts per 1-min speedup\n"[cite: 1]
+                "• **Research Acceleration:** 10 pts per 1-min speedup"[cite: 1]
             ),
             inline=False
         )
@@ -96,10 +105,10 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
-                "• **Research Acceleration:** 10 pts per 1-min speedup\n"
-                "• **Construction Acceleration:** 10 pts per 1-min speedup"
+                "• **Tech CP Increase:** 20 pts per 100 CP\n"[cite: 1]
+                "• **Wisdom Medals Consumed:** 20 pts / medal\n"[cite: 1]
+                "• **Research Acceleration:** 10 pts per 1-min speedup\n"[cite: 1]
+                "• **Construction Acceleration:** 10 pts per 1-min speedup"[cite: 1]
             ),
             inline=False
         )
@@ -121,10 +130,10 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"
-                "• **Prime Recruitment:** 900 pts per pull\n"
-                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"
-                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment"
+                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"[cite: 1]
+                "• **Prime Recruitment:** 900 pts per pull\n"[cite: 1]
+                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"[cite: 1]
+                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment"[cite: 1]
             ),
             inline=False
         )
@@ -146,8 +155,8 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Train Lv.1 Unit:** 12 pts / unit\n"
-                "• **Training Acceleration:** 10 pts per 1-min speedup"
+                "• **Train Lv.1 Unit:** 12 pts / unit\n"[cite: 1]
+                "• **Training Acceleration:** 10 pts per 1-min speedup"[cite: 1]
             ),
             inline=False
         )
@@ -169,12 +178,12 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"
-                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"
-                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment\n"
-                "• **Wisdom Medals Consumed:** 10 pts / medal\n"
-                "• **Gears Used:** 3 pts / gear\n"
-                "• **1-min Accelerations (Any):** 10 pts per speedup"
+                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"[cite: 1]
+                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"[cite: 1]
+                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment\n"[cite: 1]
+                "• **Wisdom Medals Consumed:** 10 pts / medal\n"[cite: 1]
+                "• **Gears Used:** 3 pts / gear\n"[cite: 1]
+                "• **1-min Accelerations (Any):** 10 pts per speedup"[cite: 1]
             ),
             inline=False
         )
@@ -201,24 +210,25 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
     embed.set_footer(text="Dark War Survival • Data Integration", icon_url="https://i.imgur.com/vH9Z338.png")
     return embed
 
-# Automated Hourly Alert Loop (Triggers 5 minutes before every 4-hour rotation)
-@tasks.loop(minutes=1)
-async def hourly_check_loop():
-    now_local = datetime.datetime.now(UTC_MINUS_2)
-    
-    if now_local.minute == 55 and (now_local.hour + 1) % 4 == 0:
-        channel = bot.get_channel(CHANNEL_ID)
-        if channel:
-            theme, timestamp = get_upcoming_event_details()
-            embed = build_alert_embed(theme, timestamp)
-            await channel.send(content="@everyone 🚨 **5-MINUTE EVENT ALERT!**", embed=embed)
+# Automated Scheduled Task Loop
+@tasks.loop(time=ALERT_TIMES)
+async def scheduled_alert_loop():
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        theme, timestamp = get_upcoming_event_details()
+        embed = build_alert_embed(theme, timestamp)
+        await channel.send(content="@everyone 🚨 **5-MINUTE EVENT ALERT!**", embed=embed)
+
+@scheduled_alert_loop.before_loop
+async def before_alert_loop():
+    await bot.wait_until_ready()
 
 @bot.event
 async def on_ready():
     print(f"✅ Bot online as {bot.user.name}")
-    print("🎨 Dark War Data Integration & Flask Server Active!")
-    if not hourly_check_loop.is_running():
-        hourly_check_loop.start()
+    print(f"📡 Target Channel Configured: {CHANNEL_ID}")
+    if not scheduled_alert_loop.is_running():
+        scheduled_alert_loop.start()
 
 # Commands
 @bot.command(name="test")
@@ -231,7 +241,6 @@ async def trigger_cmd(ctx):
     embed = build_alert_embed(theme, timestamp)
     await ctx.send(content="🧪 **[MANUAL TEST TRIGGER]** Upcoming Alert Preview:", embed=embed)
 
-# Run Discord Bot
 TOKEN = os.environ.get("DISCORD_TOKEN")
 if TOKEN:
     bot.run(TOKEN)
