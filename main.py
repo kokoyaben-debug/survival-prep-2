@@ -78,12 +78,12 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Precision Part in Upgrades:** 600 pts / unit\n"[cite: 1]
-                "• **Structure CP Increase:** 20 pts per 100 CP\n"[cite: 1]
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"[cite: 1]
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"[cite: 1]
-                "• **Construction Acceleration:** 10 pts per 1-min speedup\n"[cite: 1]
-                "• **Research Acceleration:** 10 pts per 1-min speedup"[cite: 1]
+                "• **Precision Part in Upgrades:** 600 pts / unit\n"
+                "• **Structure CP Increase:** 20 pts per 100 CP\n"
+                "• **Tech CP Increase:** 20 pts per 100 CP\n"
+                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
+                "• **Construction Acceleration:** 10 pts per 1-min speedup\n"
+                "• **Research Acceleration:** 10 pts per 1-min speedup"
             ),
             inline=False
         )
@@ -105,10 +105,10 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"[cite: 1]
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"[cite: 1]
-                "• **Research Acceleration:** 10 pts per 1-min speedup\n"[cite: 1]
-                "• **Construction Acceleration:** 10 pts per 1-min speedup"[cite: 1]
+                "• **Tech CP Increase:** 20 pts per 100 CP\n"
+                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
+                "• **Research Acceleration:** 10 pts per 1-min speedup\n"
+                "• **Construction Acceleration:** 10 pts per 1-min speedup"
             ),
             inline=False
         )
@@ -130,10 +130,10 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"[cite: 1]
-                "• **Prime Recruitment:** 900 pts per pull\n"[cite: 1]
-                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"[cite: 1]
-                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment"[cite: 1]
+                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"
+                "• **Prime Recruitment:** 900 pts per pull\n"
+                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"
+                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment"
             ),
             inline=False
         )
@@ -155,8 +155,8 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Train Lv.1 Unit:** 12 pts / unit\n"[cite: 1]
-                "• **Training Acceleration:** 10 pts per 1-min speedup"[cite: 1]
+                "• **Train Lv.1 Unit:** 12 pts / unit\n"
+                "• **Training Acceleration:** 10 pts per 1-min speedup"
             ),
             inline=False
         )
@@ -178,12 +178,12 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"[cite: 1]
-                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"[cite: 1]
-                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment\n"[cite: 1]
-                "• **Wisdom Medals Consumed:** 10 pts / medal\n"[cite: 1]
-                "• **Gears Used:** 3 pts / gear\n"[cite: 1]
-                "• **1-min Accelerations (Any):** 10 pts per speedup"[cite: 1]
+                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"
+                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"
+                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment\n"
+                "• **Wisdom Medals Consumed:** 10 pts / medal\n"
+                "• **Gears Used:** 3 pts / gear\n"
+                "• **1-min Accelerations (Any):** 10 pts per speedup"
             ),
             inline=False
         )
