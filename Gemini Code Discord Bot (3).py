@@ -9,7 +9,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ⚠️ REPLACE WITH YOUR DISCORD CHANNEL ID
-CHANNEL_ID = 123456789012345678  
+CHANNEL_ID = 1554020108878217247  
 
 # UTC-2 Server Timezone
 UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
@@ -217,4 +217,4 @@ async def trigger_cmd(ctx):
     embed = build_alert_embed(theme, timestamp)
     await ctx.send(content="🧪 **[MANUAL TEST TRIGGER]** Upcoming Alert Preview:", embed=embed)
 
-bot.run("YOUR_DISCORD_BOT_TOKEN_HERE")
+bot.run(os.environ.get("DISCORD_TOKEN"))
