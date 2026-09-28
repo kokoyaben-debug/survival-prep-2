@@ -1,20 +1,38 @@
 import os
 import datetime
+import threading
+from flask import Flask
 import discord
 from discord.ext import commands, tasks
 
+# 1. FLASK KEEP-ALIVE SERVER
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Dark War Event Bot is Alive & Running 24/7!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# Start Flask on a background thread so it doesn't block the Discord bot
+threading.Thread(target=run_flask, daemon=True).start()
+
+
+# 2. DISCORD BOT SETUP
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ⚠️ REPLACE WITH YOUR DISCORD CHANNEL ID
-CHANNEL_ID = 1554020108878217247  
+# Fetch Channel ID from Environment Variable
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "123456789012345678"))
 
 # UTC-2 Server Timezone
 UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
 
-# Dynamic Weekly Schedule Matrix based on Game Calendar
+# Dynamic Weekly Schedule Matrix
 WEEKLY_SCHEDULE = {
     0: {0: "Shelter Expansion", 4: "Hero Initiative", 8: "Unit Training", 12: "Age of Science", 16: "Arms Expert", 20: "Shelter Expansion"},
     1: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Shelter Expansion", 20: "Hero Initiative"},
@@ -26,7 +44,6 @@ WEEKLY_SCHEDULE = {
 }
 
 def get_upcoming_event_details():
-    """Calculates the target event name and start timestamp for the upcoming :00 mark."""
     now_local = datetime.datetime.now(UTC_MINUS_2)
     target_time_local = now_local + datetime.timedelta(minutes=5)
     
@@ -41,7 +58,6 @@ def get_upcoming_event_details():
     return event_theme, unix_timestamp
 
 def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
-    """Builds a Discord Embed featuring exact task scoring from Dark War Data."""
     countdown = f""
     
     if theme == "Shelter Expansion":
@@ -185,7 +201,7 @@ def build_alert_embed(theme: str, timestamp: int) -> discord.Embed:
     embed.set_footer(text="Dark War Survival • Data Integration", icon_url="https://i.imgur.com/vH9Z338.png")
     return embed
 
-# Triggers every hour at :55
+# Automated Hourly Alert Loop (Triggers 5 minutes before every 4-hour rotation)
 @tasks.loop(minutes=1)
 async def hourly_check_loop():
     now_local = datetime.datetime.now(UTC_MINUS_2)
@@ -200,21 +216,24 @@ async def hourly_check_loop():
 @bot.event
 async def on_ready():
     print(f"✅ Bot online as {bot.user.name}")
-    print("🎨 Dark War Data Integration Active!")
+    print("🎨 Dark War Data Integration & Flask Server Active!")
     if not hourly_check_loop.is_running():
         hourly_check_loop.start()
 
-# --- MANUAL TEST COMMANDS ---
-
+# Commands
 @bot.command(name="test")
 async def test_cmd(ctx):
     await ctx.send("🤖 **Bot is online and active!**")
 
 @bot.command(name="triggeralert")
 async def trigger_cmd(ctx):
-    """Previews the upcoming Embed alert for testing."""
     theme, timestamp = get_upcoming_event_details()
     embed = build_alert_embed(theme, timestamp)
     await ctx.send(content="🧪 **[MANUAL TEST TRIGGER]** Upcoming Alert Preview:", embed=embed)
 
-bot.run(os.environ.get("DISCORD_TOKEN"))
+# Run Discord Bot
+TOKEN = os.environ.get("DISCORD_TOKEN")
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("❌ Error: DISCORD_TOKEN environment variable not set.")
