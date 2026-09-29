@@ -88,23 +88,21 @@ def build_pre_alert_embed(theme: str, timestamp: int) -> discord.Embed:
     if theme == "Shelter Expansion":
         embed = discord.Embed(
             title="🏗️ SURVIVAL PREP — SHELTER EXPANSION",
-            description=f"### ⏳ Phase Starts {countdown}!\n---",
+            description=f"### ⏳ Phase Starts {countdown}!\n**Chest Targets:** 8k / 16k / 40k pts\n---",
             color=color
         )
         embed.add_field(
             name="🔴 MANDATORY CAPITAL POSITION",
-            value="> 👑 **APPLY FOR SECRETARY OF CONSTRUCTION AT THE CAPITAL NOW!**\n> 🛑 Do NOT finish upgrades until the event officially starts!",
+            value="> 👑 **APPLY FOR SECRETARY OF CONSTRUCTION AT THE CAPITAL NOW!**\n> 🛑 Do NOT complete upgrades until phase is officially live!",
             inline=False
         )
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Precision Part in Upgrades:** 600 pts / unit\n"
-                "• **Structure CP Increase:** 20 pts per 100 CP\n"
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
-                "• **Construction Acceleration:** 10 pts per 1-min speedup\n"
-                "• **Research Acceleration:** 10 pts per 1-min speedup"
+                "• **Precision Part in upgrades:** +300 pts / unit\n"
+                "• **1-min Construction Speedup:** +5 pts\n"
+                "• **Increase Structure CP:** +10 pts per 100 CP\n"
+                "• **Buy Packs (1 Ruby):** +40 pts"
             ),
             inline=False
         )
@@ -112,7 +110,7 @@ def build_pre_alert_embed(theme: str, timestamp: int) -> discord.Embed:
     elif theme == "Age of Science":
         embed = discord.Embed(
             title="🔬 SURVIVAL PREP — AGE OF SCIENCE",
-            description=f"### ⏳ Phase Starts {countdown}!\n---",
+            description=f"### ⏳ Phase Starts {countdown}!\n**Chest Targets:** 8k / 16k / 40k pts\n---",
             color=color
         )
         embed.add_field(
@@ -123,88 +121,95 @@ def build_pre_alert_embed(theme: str, timestamp: int) -> discord.Embed:
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Tech CP Increase:** 20 pts per 100 CP\n"
-                "• **Wisdom Medals Consumed:** 20 pts / medal\n"
-                "• **Research Acceleration:** 10 pts per 1-min speedup\n"
-                "• **Construction Acceleration:** 10 pts per 1-min speedup"
+                "• **Consume Wisdom Medals:** +5 pts / medal\n"
+                "• **1-min Research Speedup:** +5 pts\n"
+                "• **Increase Tech CP:** +10 pts per 100 CP\n"
+                "• **Buy Packs (1 Ruby):** +40 pts"
             ),
             inline=False
         )
 
     elif theme == "Hero Initiative":
         embed = discord.Embed(
-            title="🦸 SURVIVAL PREP — HERO TRIAL",
-            description=f"### ⏳ Phase Starts {countdown}!\n---",
+            title="🦸 SURVIVAL PREP — HERO INITIATIVE",
+            description=f"### ⏳ Phase Starts {countdown}!\n**Chest Targets:** 8k / 16k / 40k pts\n---",
             color=color
         )
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment (Star Rise):** 1,350 pts / fragment\n"
-                "• **Prime Recruitment:** 900 pts per pull\n"
-                "• **Purple Hero Fragment (Star Rise):** 300 pts / fragment\n"
-                "• **Blue Hero Fragment (Star Rise):** 150 pts / fragment"
+                "• **Exclusive Equipment Fragments:** +600 pts / frag\n"
+                "• **Prime Recruitment:** +400 pts / pull\n"
+                "• **Orange Hero Fragment (Star Rise):** +600 pts / frag\n"
+                "• **Purple Hero Fragment (Star Rise):** +135 pts / frag\n"
+                "• **Blue Hero Fragment (Star Rise):** +65 pts / frag\n"
+                "• **Buy Packs (1 Ruby):** +40 pts"
             ),
             inline=False
         )
-        embed.add_field(name="💡 PRO STRATEGY", value="> 🎟️ Focus recruitment pulls in bulk during this phase.", inline=False)
 
     elif theme == "Unit Training":
         embed = discord.Embed(
             title="🪖 SURVIVAL PREP — UNIT TRAINING",
-            description=f"### ⏳ Phase Starts {countdown}!\n---",
-            color=color
-        )
-        embed.add_field(
-            name="📊 EXACT TASK SCORING",
-            value="• **Train Lv.1 Unit:** 12 pts / unit\n• **Training Acceleration:** 10 pts per 1-min speedup",
-            inline=False
-        )
-        embed.add_field(name="💡 PRO STRATEGY", value="> 🛡️ Leave finished troops in barracks until phase starts!", inline=False)
-
-    elif theme == "Arms Expert":
-        embed = discord.Embed(
-            title="🎯 SURVIVAL PREP — ARMS EXPERT",
-            description=f"### ⏳ Phase Starts {countdown}!\n---",
+            description=f"### ⏳ Phase Starts {countdown}!\n**Chest Targets:** 8k / 16k / 40k pts\n---",
             color=color
         )
         embed.add_field(
             name="📊 EXACT TASK SCORING",
             value=(
-                "• **Orange Hero Fragment:** 1,350 pts / fragment\n"
-                "• **Purple Hero Fragment:** 300 pts / fragment\n"
-                "• **Blue Hero Fragment:** 150 pts / fragment\n"
-                "• **Wisdom Medals Consumed:** 10 pts / medal\n"
-                "• **Gears Used:** 3 pts / gear\n"
-                "• **1-min Accelerations (Any):** 10 pts per speedup"
+                "• **1-min Training/Promotion Speedup:** +5 pts\n"
+                "• **Train Troops:** Lv.1 (+6), Lv.2 (+9), Lv.3 (+13), Lv.4 (+19), Lv.5 (+28)\n"
+                "• **High-Tier Troops:** Lv.6 (+35), Lv.7 (+45), Lv.8 (+57), Lv.9 (+74), Lv.10 (+91)\n"
+                "• **Promote Units:** +Corresponding points\n"
+                "• **Buy Packs (1 Ruby):** +40 pts"
             ),
             inline=False
         )
-        embed.add_field(name="💡 PRO STRATEGY", value="> ⚙️ Combine gears and general speedups to reach max milestone chests!", inline=False)
+
+    elif theme == "Arms Expert":
+        embed = discord.Embed(
+            title="🎯 SURVIVAL PREP — ARMS EXPERT",
+            description=f"### ⏳ Phase Starts {countdown}!\n**Chest Targets:** 8k / 16k / 40k pts\n---",
+            color=color
+        )
+        embed.add_field(
+            name="📊 EXACT TASK SCORING",
+            value=(
+                "• **Use 1 Gears:** +2 pts\n"
+                "• **Consume 1 Titanium Alloy:** +180 pts\n"
+                "• **Consume 1 Design Blueprints:** +360 pts\n"
+                "• **Consume 1 Power Cores:** +450 pts\n"
+                "• **Open Hero Equipment Lucky Chest:** +1,000 pts\n"
+                "• **Power Cores in D6 Red Equip:** +600 pts bonus\n"
+                "• **Consume 1 DX-Blueprint:** +9,000 pts\n"
+                "• **Buy Packs (1 Ruby):** +40 pts"
+            ),
+            inline=False
+        )
 
     else:
         embed = discord.Embed(title="⚔️ SURVIVAL PREP ALERT", description=f"### ⏳ Phase Starts {countdown}!", color=color)
 
-    embed.set_footer(text="Dark War Survival • Data Integration")
+    embed.set_footer(text="Dark War Survival • Verified Data System")
     return embed
 
 def build_live_alert_embed(theme: str) -> discord.Embed:
     color = PHASE_COLORS.get(theme, discord.Color.red())
     embed = discord.Embed(
         title=f"🔥 {theme.upper()} IS NOW LIVE!",
-        description="### ⚡ Event points are now active! Start completing tasks now.",
+        description="### ⚡ Event points are active! Complete tasks to unlock your 8k, 16k, and 40k chests.",
         color=color
     )
     if theme == "Shelter Expansion":
         embed.add_field(
             name="🔴 CAPITAL BUFF REMINDER",
-            value="> 🏛️ Ensure you have **Secretary of Construction** active before executing building upgrades!",
+            value="> 🏛️ Make sure **Secretary of Construction** is active before executing upgrades!",
             inline=False
         )
     elif theme == "Age of Science":
         embed.add_field(
             name="🔴 CAPITAL BUFF REMINDER",
-            value="> 🔬 Ensure you have **Secretary of Science** active before starting high-tier research!",
+            value="> 🔬 Make sure **Secretary of Science** is active before collecting research nodes!",
             inline=False
         )
     embed.set_footer(text="Dark War Survival • Live Event Monitor")
@@ -255,7 +260,7 @@ async def on_ready():
 # Commands
 @bot.command(name="test")
 async def test_cmd(ctx):
-    await ctx.send("🤖 **Bot is online and active!**", delete_after=10)
+    await ctx.send("🤖 **Bot is online and fully configured!**", delete_after=10)
     try:
         await ctx.message.delete()
     except discord.Forbidden:
@@ -303,12 +308,11 @@ async def next_cmd(ctx):
 
 @bot.command(name="schedule")
 async def schedule_cmd(ctx):
-    """Generates a comprehensive weekly schedule breakdown with relative countdowns."""
     try:
         now_local = datetime.datetime.now(UTC_MINUS_2)
         embed = discord.Embed(
             title="🗓️ FULL WEEKLY EVENT SCHEDULE",
-            description="All phases shown with automatic local time conversions and countdowns.",
+            description="All 4-hour prep phase schedules converted automatically to your local time.",
             color=discord.Color.from_str("#34495E")
         )
 
