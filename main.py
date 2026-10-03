@@ -1,4 +1,5 @@
 import os
+import json
 import datetime
 import threading
 from flask import Flask
@@ -23,18 +24,40 @@ threading.Thread(target=run_flask, daemon=True).start()
 
 
 # ---------------------------------------------------------
-# 2. DISCORD BOT & SLASH COMMAND SETUP
+# 2. CONFIGURATION & STORAGE HELPERS
+# ---------------------------------------------------------
+CONFIG_FILE = "config.json"
+
+def load_channel_id() -> int:
+    default_id = int(os.environ.get("CHANNEL_ID", "1554020108878217247"))
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("PREP_CHANNEL_ID", default_id)
+    except Exception as e:
+        print(f"⚠️ Failed to load config.json: {e}")
+    return default_id
+
+def save_channel_id(channel_id: int):
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"PREP_CHANNEL_ID": channel_id}, f)
+    except Exception as e:
+        print(f"❌ Failed to save config.json: {e}")
+
+PREP_CHANNEL_ID = load_channel_id()
+UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
+
+
+# ---------------------------------------------------------
+# 3. DISCORD BOT & CONSTANTS SETUP
 # ---------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Dynamic or Environment Channel ID storage
-PREP_CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "1554020108878217247"))
-UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
-
-# Color Palette
 PHASE_COLORS = {
     "Shelter Expansion": discord.Color.from_str("#F1C40F"),  # Gold
     "Age of Science":    discord.Color.from_str("#3498DB"),  # Blue
@@ -43,7 +66,6 @@ PHASE_COLORS = {
     "Arms Expert":       discord.Color.from_str("#E74C3C")   # Red
 }
 
-# Server Time (ST) strings matching game cycles
 ST_RANGES = {
     0: "00:00-04:00 ST",
     4: "04:00-08:00 ST",
@@ -53,7 +75,6 @@ ST_RANGES = {
     20: "20:00-00:00 ST"
 }
 
-# Weekly Cycle Schedule
 WEEKLY_SCHEDULE = {
     0: {0: "Shelter Expansion", 4: "Hero Initiative", 8: "Unit Training", 12: "Age of Science", 16: "Arms Expert", 20: "Shelter Expansion"},
     1: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Shelter Expansion", 20: "Hero Initiative"},
@@ -66,7 +87,6 @@ WEEKLY_SCHEDULE = {
 
 DAYS_MAP = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
 
-# Task Scoring Details
 TASK_DETAILS = {
     "Shelter Expansion": [
         "Use 1 Precision Parts in building upgrades: +300 pts",
@@ -115,8 +135,9 @@ TASK_DETAILS = {
     ]
 }
 
+
 # ---------------------------------------------------------
-# 3. HELPER FUNCTIONS & EMBED BUILDERS
+# 4. HELPER FUNCTIONS & EMBED BUILDER
 # ---------------------------------------------------------
 def get_event_at_time(dt_local: datetime.datetime):
     weekday = dt_local.weekday()
@@ -124,18 +145,17 @@ def get_event_at_time(dt_local: datetime.datetime):
     theme = WEEKLY_SCHEDULE.get(weekday, {}).get(hour, "Survival Prep Phase")
     st_str = ST_RANGES.get(hour, "00:00-04:00 ST")
     unix_start = int(dt_local.astimezone(datetime.timezone.utc).timestamp())
-    unix_end = unix_start + 14400  # 4 hours later
+    unix_end = unix_start + 14400  # 4 hours
     return theme, st_str, unix_start, unix_end
 
 def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: int, is_pre_alert: bool = False, mins_left: int = 0) -> list:
     color = PHASE_COLORS.get(theme, discord.Color.orange())
     
-    # Dynamic Timestamps
     start_fmt = f""
     end_fmt = f""
     countdown_fmt = f"" if not is_pre_alert else f""
 
-    # 1. TOP EMBED: Active Task Box
+    # Embed 1: Active Task Box
     embed_top = discord.Embed(title="Active task", color=color)
     
     pre_alert_warning = ""
@@ -144,17 +164,16 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
         pre_alert_warning = f"```diff\n- 🔴 CAPITAL TITLE REQUIRED IN {mins_left} MINS!\n+ APPLY FOR {title_name} AT THE CAPITAL NOW!\n```\n"
 
     top_code_box = f"```yaml\n► ACTIVE TASK\n\n{theme}\n{st_range}\n```"
-    
     status_line = f"Starts {start_fmt} · Ends {end_fmt}" if not is_pre_alert else f"Phase Starts {countdown_fmt} ({start_fmt})"
     time_line = f"Ends {countdown_fmt}" if not is_pre_alert else f"Ends at {end_fmt}"
     
     embed_top.description = f"{pre_alert_warning}{top_code_box}\n{status_line}\n{time_line}"
     embed_top.set_footer(text="Server Time (ST) · times also show in your local timezone")
 
-    # 2. BOTTOM EMBED: Event Details Box
+    # Embed 2: Event Details Box
     embed_bottom = discord.Embed(title="Event details", color=color)
-    
     tasks = TASK_DETAILS.get(theme, ["Complete tasks to gain points!"])
+    
     details_text = f"```ansi\n\u001b[35m{theme} — event details\033[0m\n\n"
     for item in tasks:
         details_text += f"\u001b[35m• {item}\033[0m\n"
@@ -167,7 +186,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
 
 
 # ---------------------------------------------------------
-# 4. AUTOMATED LOOPS (PRE-ALERTS & LIVE ALERTS)
+# 5. AUTOMATED SCHEDULE LOOP
 # ---------------------------------------------------------
 @tasks.loop(minutes=1)
 async def schedule_check_loop():
@@ -177,7 +196,7 @@ async def schedule_check_loop():
         if not channel:
             return
 
-        # Check 10-min and 5-min pre-alerts for Construction & Science ONLY
+        # Check 10-min and 5-min pre-alerts (Construction & Science ONLY)
         for mins in [10, 5]:
             target_dt = now_local + datetime.timedelta(minutes=mins)
             if target_dt.minute == 0 and target_dt.hour in [0, 4, 8, 12, 16, 20]:
@@ -186,7 +205,7 @@ async def schedule_check_loop():
                     embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins)
                     await channel.send(content=f"@everyone 🚨 **{mins}-MINUTE CAPITAL TITLE PRE-ALERT!**", embeds=embeds)
 
-        # Check Live Phase Start for ALL Tasks
+        # Check Live Phase Start (ALL Tasks)
         if now_local.minute == 0 and now_local.hour in [0, 4, 8, 12, 16, 20]:
             theme, st_str, unix_start, unix_end = get_event_at_time(now_local)
             embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
@@ -201,14 +220,14 @@ async def before_schedule_loop():
 
 
 # ---------------------------------------------------------
-# 5. COMMANDS & EVENT HANDLERS
+# 6. DISCORD EVENT HANDLERS & COMMANDS
 # ---------------------------------------------------------
 @bot.event
 async def on_ready():
     print(f"✅ Bot logged in as {bot.user.name}")
     try:
         synced = await bot.tree.sync()
-        print(f"📡 Synced {len(synced)} slash commands globally.")
+        print(f"📡 Synced {len(synced)} slash command(s) globally.")
     except Exception as e:
         print(f"❌ Failed to sync slash commands: {e}")
         
@@ -216,12 +235,25 @@ async def on_ready():
         schedule_check_loop.start()
 
 # Slash Command: /set_prep_channel
-@bot.tree.command(name="set_prep_channel", description="Set the target channel for event notifications")
-@app_commands.describe(channel="Select the text channel for event alerts")
+@bot.tree.command(name="set_prep_channel", description="Set the target channel for automated event notifications.")
+@app_commands.describe(channel="Select the text channel where event alerts should be sent.")
+@app_commands.default_permissions(administrator=True)
 async def set_prep_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     global PREP_CHANNEL_ID
+    
+    if not interaction.user.guild_permissions.manage_channels and not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ You need **Manage Channels** or **Administrator** permissions to use this command.", ephemeral=True)
+        return
+
     PREP_CHANNEL_ID = channel.id
-    await interaction.response.send_message(f"✅ **Event Prep notification channel updated to:** {channel.mention}", ephemeral=True)
+    save_channel_id(channel.id)
+    
+    embed = discord.Embed(
+        title="⚙️ Notification Channel Updated",
+        description=f"Automated prep alerts will now be sent to {channel.mention}.\nSetting saved permanently to configuration.",
+        color=discord.Color.green()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # Prefix Command: !next
 @bot.command(name="next")
@@ -237,7 +269,8 @@ async def next_cmd(ctx):
         target_dt = datetime.datetime(next_date.year, next_date.month, next_date.day, next_hour, 0, tzinfo=UTC_MINUS_2)
         theme, st_str, unix_start, unix_end = get_event_at_time(target_dt)
         
-        embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=int((target_dt - now_local).total_seconds() // 60))
+        mins_until = int((target_dt - now_local).total_seconds() // 60)
+        embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins_until)
         
         await ctx.send(content="📅 **UPCOMING PREP PHASE DETAILS:**", embeds=embeds, delete_after=60)
         try:
@@ -284,6 +317,9 @@ async def schedule_cmd(ctx):
         await ctx.send(f"❌ Error generating schedule: {e}", delete_after=10)
 
 
+# ---------------------------------------------------------
+# 7. BOT RUNNER
+# ---------------------------------------------------------
 TOKEN = os.environ.get("DISCORD_TOKEN")
 if TOKEN:
     bot.run(TOKEN)
