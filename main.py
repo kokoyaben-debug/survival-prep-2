@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import math
 import threading
 from flask import Flask
 import discord
@@ -54,8 +55,6 @@ UTC_MINUS_2 = datetime.timezone(datetime.timedelta(hours=-2))
 # 3. DISCORD BOT & CONSTANTS SETUP
 # ---------------------------------------------------------
 intents = discord.Intents.default()
-intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 PHASE_COLORS = {
@@ -137,7 +136,7 @@ TASK_DETAILS = {
 
 
 # ---------------------------------------------------------
-# 4. HELPER FUNCTIONS & EMBED BUILDER
+# 4. HELPER FUNCTIONS & EMBED BUILDERS
 # ---------------------------------------------------------
 def get_event_at_time(dt_local: datetime.datetime):
     weekday = dt_local.weekday()
@@ -148,6 +147,13 @@ def get_event_at_time(dt_local: datetime.datetime):
     unix_end = unix_start + 14400  # 4 hours
     return theme, st_str, unix_start, unix_end
 
+def get_current_active_event():
+    now_local = datetime.datetime.now(UTC_MINUS_2)
+    current_hour_slot = (now_local.hour // 4) * 4
+    slot_dt = datetime.datetime(now_local.year, now_local.month, now_local.day, current_hour_slot, 0, tzinfo=UTC_MINUS_2)
+    theme, st_str, unix_start, unix_end = get_event_at_time(slot_dt)
+    return theme, st_str, unix_start, unix_end
+
 def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: int, is_pre_alert: bool = False, mins_left: int = 0) -> list:
     color = PHASE_COLORS.get(theme, discord.Color.orange())
     
@@ -155,7 +161,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
     end_fmt = f""
     countdown_fmt = f"" if not is_pre_alert else f""
 
-    # Embed 1: Active Task Box
+    # 1. TOP EMBED: Active Task Box
     embed_top = discord.Embed(title="Active task", color=color)
     
     pre_alert_warning = ""
@@ -170,7 +176,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
     embed_top.description = f"{pre_alert_warning}{top_code_box}\n{status_line}\n{time_line}"
     embed_top.set_footer(text="Server Time (ST) · times also show in your local timezone")
 
-    # Embed 2: Event Details Box
+    # 2. BOTTOM EMBED: Event Details Box
     embed_bottom = discord.Embed(title="Event details", color=color)
     tasks = TASK_DETAILS.get(theme, ["Complete tasks to gain points!"])
     
@@ -220,7 +226,7 @@ async def before_schedule_loop():
 
 
 # ---------------------------------------------------------
-# 6. DISCORD EVENT HANDLERS & COMMANDS
+# 6. DISCORD SLASH COMMANDS
 # ---------------------------------------------------------
 @bot.event
 async def on_ready():
@@ -234,8 +240,97 @@ async def on_ready():
     if not schedule_check_loop.is_running():
         schedule_check_loop.start()
 
+# Slash Command: /active_prep
+@bot.tree.command(name="active_prep", description="View the currently active prep phase and event tasks")
+async def active_prep_cmd(interaction: discord.Interaction):
+    theme, st_str, unix_start, unix_end = get_current_active_event()
+    embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
+    await interaction.response.send_message(content="🔥 **CURRENT ACTIVE PREP PHASE:**", embeds=embeds)
+
+# Slash Command: /next
+@bot.tree.command(name="next", description="Check the upcoming event phase and countdown")
+async def next_cmd(interaction: discord.Interaction):
+    now_local = datetime.datetime.now(UTC_MINUS_2)
+    cycle_hours = [0, 4, 8, 12, 16, 20]
+    current_hour = now_local.hour
+    
+    next_hour = next((h for h in cycle_hours if h > current_hour), cycle_hours[0])
+    next_date = now_local + datetime.timedelta(days=1) if next_hour <= current_hour else now_local
+
+    target_dt = datetime.datetime(next_date.year, next_date.month, next_date.day, next_hour, 0, tzinfo=UTC_MINUS_2)
+    theme, st_str, unix_start, unix_end = get_event_at_time(target_dt)
+    
+    mins_until = int((target_dt - now_local).total_seconds() // 60)
+    embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins_until)
+    
+    await interaction.response.send_message(content="📅 **UPCOMING PREP PHASE DETAILS:**", embeds=embeds)
+
+# Slash Command: /schedule
+@bot.tree.command(name="schedule", description="Display the full weekly prep phase schedule in your local time")
+async def schedule_cmd(interaction: discord.Interaction):
+    now_local = datetime.datetime.now(UTC_MINUS_2)
+    embed = discord.Embed(
+        title="🗓️ MASTER WEEKLY EVENT SCHEDULE",
+        description="Every 4-hour prep slot dynamically converted to your local device timezone.",
+        color=discord.Color.from_str("#2C3E50")
+    )
+
+    for day_offset in range(7):
+        target_day_dt = now_local + datetime.timedelta(days=day_offset)
+        weekday_idx = target_day_dt.weekday()
+        day_name = DAYS_MAP[weekday_idx]
+        
+        day_str = ""
+        for hour in [0, 4, 8, 12, 16, 20]:
+            slot_dt = datetime.datetime(target_day_dt.year, target_day_dt.month, target_day_dt.day, hour, 0, tzinfo=UTC_MINUS_2)
+            ts = int(slot_dt.astimezone(datetime.timezone.utc).timestamp())
+            theme = WEEKLY_SCHEDULE[weekday_idx][hour]
+            day_str += f"•  (): **{theme}**\n"
+
+        header = f"📅 {day_name}" if day_offset != 0 else f"📅 Today ({day_name})"
+        embed.add_field(name=header, value=day_str, inline=False)
+
+    embed.set_footer(text="Dark War Survival • Verified Data System")
+    await interaction.response.send_message(embed=embed)
+
+# Slash Command: /chest_calculator
+@bot.tree.command(name="chest_calculator", description="Calculate required speedups or item uses to unlock event chests")
+@app_commands.describe(
+    target_points="Target Chest (8000, 16000, 40000)",
+    action_type="Select action (Speedups, Wisdom Medals, Prime Recruits, Gears, Power Cores)"
+)
+@app_commands.choices(
+    target_points=[
+        app_commands.Choice(name="Chest 1 (8,000 pts - 590 Rubies)", value=8000),
+        app_commands.Choice(name="Chest 2 (16,000 pts - 1,200 Rubies)", value=16000),
+        app_commands.Choice(name="Chest 3 (40,000 pts - 2,950 Rubies)", value=40000)
+    ],
+    action_type=[
+        app_commands.Choice(name="1-Min Speedups (+5 pts)", value=5),
+        app_commands.Choice(name="Wisdom Medals (+5 pts)", value=5),
+        app_commands.Choice(name="Precision Parts (+300 pts)", value=300),
+        app_commands.Choice(name="Prime Recruits (+400 pts)", value=400),
+        app_commands.Choice(name="Exclusive Equip Fragments (+600 pts)", value=600),
+        app_commands.Choice(name="Orange Hero Fragments (+600 pts)", value=600),
+        app_commands.Choice(name="Power Cores (+450 pts)", value=450),
+        app_commands.Choice(name="Titanium Alloy (+180 pts)", value=180)
+    ]
+)
+async def chest_calc_cmd(interaction: discord.Interaction, target_points: app_commands.Choice[int], action_type: app_commands.Choice[int]):
+    required_count = math.ceil(target_points.value / action_type.value)
+    
+    embed = discord.Embed(
+        title="🧮 EVENT CHEST CALCULATOR",
+        color=discord.Color.brand_green()
+    )
+    embed.add_field(name="🎯 Target Goal", value=f"**{target_points.value:,} Points** ({target_points.name})", inline=False)
+    embed.add_field(name="⚡ Required Action", value=f"**{required_count:,}x** {action_type.name}", inline=False)
+    embed.set_footer(text="Dark War Survival • Quick Calculator")
+    
+    await interaction.response.send_message(embed=embed)
+
 # Slash Command: /set_prep_channel
-@bot.tree.command(name="set_prep_channel", description="Set the target channel for automated event notifications.")
+@bot.tree.command(name="set_prep_channel", description="Set the target text channel for automated event notifications")
 @app_commands.describe(channel="Select the text channel where event alerts should be sent.")
 @app_commands.default_permissions(administrator=True)
 async def set_prep_channel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -250,71 +345,21 @@ async def set_prep_channel(interaction: discord.Interaction, channel: discord.Te
     
     embed = discord.Embed(
         title="⚙️ Notification Channel Updated",
-        description=f"Automated prep alerts will now be sent to {channel.mention}.\nSetting saved permanently to configuration.",
+        description=f"Automated prep alerts will now be sent to {channel.mention}.\nSetting saved permanently to `config.json`.",
         color=discord.Color.green()
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-# Prefix Command: !next
-@bot.command(name="next")
-async def next_cmd(ctx):
-    try:
-        now_local = datetime.datetime.now(UTC_MINUS_2)
-        cycle_hours = [0, 4, 8, 12, 16, 20]
-        current_hour = now_local.hour
-        
-        next_hour = next((h for h in cycle_hours if h > current_hour), cycle_hours[0])
-        next_date = now_local + datetime.timedelta(days=1) if next_hour <= current_hour else now_local
-
-        target_dt = datetime.datetime(next_date.year, next_date.month, next_date.day, next_hour, 0, tzinfo=UTC_MINUS_2)
-        theme, st_str, unix_start, unix_end = get_event_at_time(target_dt)
-        
-        mins_until = int((target_dt - now_local).total_seconds() // 60)
-        embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins_until)
-        
-        await ctx.send(content="📅 **UPCOMING PREP PHASE DETAILS:**", embeds=embeds, delete_after=60)
-        try:
-            await ctx.message.delete()
-        except discord.Forbidden:
-            pass
-    except Exception as e:
-        await ctx.send(f"❌ Error fetching next phase: {e}", delete_after=10)
-
-# Prefix Command: !schedule
-@bot.command(name="schedule")
-async def schedule_cmd(ctx):
-    try:
-        now_local = datetime.datetime.now(UTC_MINUS_2)
-        embed = discord.Embed(
-            title="🗓️ FULL WEEKLY EVENT SCHEDULE",
-            description="All 4-hour prep phase schedules converted dynamically to your local time.",
-            color=discord.Color.from_str("#34495E")
-        )
-
-        for day_offset in range(7):
-            target_day_dt = now_local + datetime.timedelta(days=day_offset)
-            weekday_idx = target_day_dt.weekday()
-            day_name = DAYS_MAP[weekday_idx]
-            
-            day_str = ""
-            for hour in [0, 4, 8, 12, 16, 20]:
-                slot_dt = datetime.datetime(target_day_dt.year, target_day_dt.month, target_day_dt.day, hour, 0, tzinfo=UTC_MINUS_2)
-                ts = int(slot_dt.astimezone(datetime.timezone.utc).timestamp())
-                theme = WEEKLY_SCHEDULE[weekday_idx][hour]
-                day_str += f"•  (): **{theme}**\n"
-
-            header = f"📅 {day_name}" if day_offset != 0 else f"📅 Today ({day_name})"
-            embed.add_field(name=header, value=day_str, inline=False)
-
-        embed.set_footer(text="Dark War Survival • Master Schedule (Deletes in 120s)")
-        
-        await ctx.send(embed=embed, delete_after=120)
-        try:
-            await ctx.message.delete()
-        except discord.Forbidden:
-            pass
-    except Exception as e:
-        await ctx.send(f"❌ Error generating schedule: {e}", delete_after=10)
+# Slash Command: /test
+@bot.tree.command(name="test", description="Test bot connectivity and latency")
+async def test_cmd(interaction: discord.Interaction):
+    latency = round(bot.latency * 1000)
+    embed = discord.Embed(
+        title="🤖 Bot Status: Operational",
+        description=f"**Ping Latency:** `{latency} ms`\n**Active Target Channel:** <#{PREP_CHANNEL_ID}>",
+        color=discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ---------------------------------------------------------
