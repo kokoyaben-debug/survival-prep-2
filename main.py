@@ -19,7 +19,8 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    # Disabled reloader to prevent thread collision with asyncio
+    app.run(host='0.0.0.0', port=port, use_reloader=False)
 
 threading.Thread(target=run_flask, daemon=True).start()
 
@@ -65,13 +66,21 @@ PHASE_COLORS = {
     "Arms Expert":       discord.Color.from_str("#E74C3C")   # Red
 }
 
+PHASE_ICONS = {
+    "Shelter Expansion": "🏰",
+    "Age of Science":    "🔬",
+    "Hero Initiative":   "🦸‍♂️",
+    "Unit Training":     "🪖",
+    "Arms Expert":       "⚔️"
+}
+
 ST_RANGES = {
-    0: "00:00-04:00 ST",
-    4: "04:00-08:00 ST",
-    8: "08:00-12:00 ST",
-    12: "12:00-16:00 ST",
-    16: "16:00-20:00 ST",
-    20: "20:00-00:00 ST"
+    0: "00:00 - 04:00 ST",
+    4: "04:00 - 08:00 ST",
+    8: "08:00 - 12:00 ST",
+    12: "12:00 - 16:00 ST",
+    16: "16:00 - 20:00 ST",
+    20: "20:00 - 00:00 ST"
 }
 
 WEEKLY_SCHEDULE = {
@@ -88,49 +97,42 @@ DAYS_MAP = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday
 
 TASK_DETAILS = {
     "Shelter Expansion": [
-        "Use 1 Precision Parts in building upgrades: +300 pts",
-        "Use any 1-min acceleration in construction: +5 pts",
-        "Increase Structure CP by 100 Points: +10 pts",
-        "Buy Packs to Get 1 Rubies: +40 pts"
+        "**Precision Parts** — Use 1 unit in building upgrades (`+300 pts`)",
+        "**Construction Speedups** — Use 1-min acceleration (`+5 pts`)",
+        "**Structure Power** — Increase Structure CP by 100 pts (`+10 pts`)",
+        "**Ruby Store** — Buy Packs to obtain 1 Ruby (`+40 pts`)"
     ],
     "Age of Science": [
-        "Consume 1 Wisdom Medals: +5 pts",
-        "Use any 1-min acceleration in research: +5 pts",
-        "Increase Tech CP by 100 Points: +10 pts",
-        "Buy Packs to Get 1 Rubies: +40 pts"
+        "**Wisdom Medals** — Consume 1 Medal (`+5 pts`)",
+        "**Research Speedups** — Use 1-min acceleration (`+5 pts`)",
+        "**Tech Power** — Increase Tech CP by 100 pts (`+10 pts`)",
+        "**Ruby Store** — Buy Packs to obtain 1 Ruby (`+40 pts`)"
     ],
     "Hero Initiative": [
-        "Every 1 Exclusive Equipment Fragments consumed: +600 pts",
-        "Perform 1 Prime Recruits: +400 pts",
-        "Every 1 Orange hero fragments spent in Star Rise: +600 pts",
-        "Every 1 Purple hero fragments spent in Star Rise: +135 pts",
-        "Every 1 Blue hero fragments spent in Star Rise: +65 pts",
-        "Buy Packs to Get 1 Rubies: +40 pts"
+        "**Exclusive Equipment** — Consume 1 Fragment (`+600 pts`)",
+        "**Prime Recruits** — Perform 1 Prime Recruitment (`+400 pts`)",
+        "**Orange Hero Fragments** — Spend 1 in Star Rise (`+600 pts`)",
+        "**Purple Hero Fragments** — Spend 1 in Star Rise (`+135 pts`)",
+        "**Blue Hero Fragments** — Spend 1 in Star Rise (`+65 pts`)",
+        "**Ruby Store** — Buy Packs to obtain 1 Ruby (`+40 pts`)"
     ],
     "Unit Training": [
-        "Use any 1-min acceleration in unit training & promotion: +5 pts",
-        "Train to get 1 Lv.1 Unit: +6 pts",
-        "Train to get 1 Lv.2 Unit: +9 pts",
-        "Train to get 1 Lv.3 Unit: +13 pts",
-        "Train to get 1 Lv.4 Unit: +19 pts",
-        "Train to get 1 Lv.5 Unit: +28 pts",
-        "Train to get 1 Lv.6 Unit: +35 pts",
-        "Train to get 1 Lv.7 Unit: +45 pts",
-        "Train to get 1 Lv.8 Unit: +57 pts",
-        "Train to get 1 Lv.9 Unit: +74 pts",
-        "Train to get 1 Lv.10 Unit: +91 pts",
-        "Promote Units: +Corresponding points",
-        "Buy Packs to Get 1 Rubies: +40 pts"
+        "**Training Speedups** — Use 1-min acceleration (`+5 pts`)",
+        "**Unit Recruitment** — Train to get troops:",
+        "  • Lv.1: `+6` | Lv.2: `+9` | Lv.3: `+13` | Lv.4: `+19` | Lv.5: `+28`",
+        "  • Lv.6: `+35` | Lv.7: `+45` | Lv.8: `+57` | Lv.9: `+74` | Lv.10: `+91`",
+        "**Promote Units** — Grants corresponding tier points",
+        "**Ruby Store** — Buy Packs to obtain 1 Ruby (`+40 pts`)"
     ],
     "Arms Expert": [
-        "Use 1 Gears: +2 pts",
-        "Consume 1 Titanium Alloy: +180 pts",
-        "Consume 1 design blueprints: +360 pts",
-        "Consume 1 Power Cores: +450 pts",
-        "Open 1 Hero Equipment Lucky Chests: +1,000 pts",
-        "Using Power Cores in D6 Red Equipment upgrade grants bonus points: +600 pts",
-        "Consume 1 DX-Blueprint: +9,000 pts",
-        "Buy Packs to Get 1 Rubies: +40 pts"
+        "**Gears** — Consume 1 Gear (`+2 pts`)",
+        "**Titanium Alloy** — Consume 1 Alloy (`+180 pts`)",
+        "**Design Blueprints** — Consume 1 Blueprint (`+360 pts`)",
+        "**Power Cores** — Consume 1 Core (`+450 pts`)",
+        "**Lucky Chests** — Open 1 Hero Equipment Chest (`+1,000 pts`)",
+        "**D6 Red Equipment** — Upgrade bonus with Cores (`+600 pts`)",
+        "**DX-Blueprint** — Consume 1 DX-Blueprint (`+9,000 pts`)",
+        "**Ruby Store** — Buy Packs to obtain 1 Ruby (`+40 pts`)"
     ]
 }
 
@@ -140,9 +142,11 @@ TASK_DETAILS = {
 # ---------------------------------------------------------
 def get_event_at_time(dt_local: datetime.datetime):
     weekday = dt_local.weekday()
-    hour = dt_local.hour
-    theme = WEEKLY_SCHEDULE.get(weekday, {}).get(hour, "Survival Prep Phase")
-    st_str = ST_RANGES.get(hour, "00:00-04:00 ST")
+    # Floor to nearest 4-hour window
+    hour_slot = (dt_local.hour // 4) * 4
+    
+    theme = WEEKLY_SCHEDULE.get(weekday, {}).get(hour_slot, "Survival Prep Phase")
+    st_str = ST_RANGES.get(hour_slot, "00:00 - 04:00 ST")
     unix_start = int(dt_local.astimezone(datetime.timezone.utc).timestamp())
     unix_end = unix_start + 14400  # 4 hours
     return theme, st_str, unix_start, unix_end
@@ -155,218 +159,35 @@ def get_current_active_event():
     return theme, st_str, unix_start, unix_end
 
 def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: int, is_pre_alert: bool = False, mins_left: int = 0) -> list:
-    color = PHASE_COLORS.get(theme, discord.Color.orange())
+    color = PHASE_COLORS.get(theme, discord.Color.gold())
+    icon = PHASE_ICONS.get(theme, "🎯")
     
     start_fmt = f""
     end_fmt = f""
     countdown_fmt = f"" if not is_pre_alert else f""
 
-    # 1. TOP EMBED: Active Task Box
-    embed_top = discord.Embed(title="Active task", color=color)
+    # 1. TOP EMBED: Active Status & Time Frame
+    embed_top = discord.Embed(color=color)
     
-    pre_alert_warning = ""
     if is_pre_alert:
         title_name = "SECRETARY OF CONSTRUCTION" if theme == "Shelter Expansion" else "SECRETARY OF SCIENCE"
-        pre_alert_warning = f"```diff\n- 🔴 CAPITAL TITLE REQUIRED IN {mins_left} MINS!\n+ APPLY FOR {title_name} AT THE CAPITAL NOW!\n```\n"
-
-    top_code_box = f"```yaml\n► ACTIVE TASK\n\n{theme}\n{st_range}\n```"
-    status_line = f"Starts {start_fmt} · Ends {end_fmt}" if not is_pre_alert else f"Phase Starts {countdown_fmt} ({start_fmt})"
-    time_line = f"Ends {countdown_fmt}" if not is_pre_alert else f"Ends at {end_fmt}"
-    
-    embed_top.description = f"{pre_alert_warning}{top_code_box}\n{status_line}\n{time_line}"
-    embed_top.set_footer(text="Server Time (ST) · times also show in your local timezone")
-
-    # 2. BOTTOM EMBED: Event Details Box
-    embed_bottom = discord.Embed(title="Event details", color=color)
-    tasks = TASK_DETAILS.get(theme, ["Complete tasks to gain points!"])
-    
-    details_text = f"```ansi\n\u001b[35m{theme} — event details\033[0m\n\n"
-    for item in tasks:
-        details_text += f"\u001b[35m• {item}\033[0m\n"
-    details_text += "```"
-    
-    embed_bottom.description = details_text
-    embed_bottom.set_footer(text="Scoring tasks for this slot")
-
-    return [embed_top, embed_bottom]
-
-
-# ---------------------------------------------------------
-# 5. AUTOMATED SCHEDULE LOOP
-# ---------------------------------------------------------
-@tasks.loop(minutes=1)
-async def schedule_check_loop():
-    try:
-        now_local = datetime.datetime.now(UTC_MINUS_2)
-        channel = bot.get_channel(PREP_CHANNEL_ID)
-        if not channel:
-            return
-
-        # Check 10-min and 5-min pre-alerts (Construction & Science ONLY)
-        for mins in [10, 5]:
-            target_dt = now_local + datetime.timedelta(minutes=mins)
-            if target_dt.minute == 0 and target_dt.hour in [0, 4, 8, 12, 16, 20]:
-                theme, st_str, unix_start, unix_end = get_event_at_time(target_dt)
-                if theme in ["Shelter Expansion", "Age of Science"]:
-                    embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins)
-                    await channel.send(content=f"@everyone 🚨 **{mins}-MINUTE CAPITAL TITLE PRE-ALERT!**", embeds=embeds)
-
-        # Check Live Phase Start (ALL Tasks)
-        if now_local.minute == 0 and now_local.hour in [0, 4, 8, 12, 16, 20]:
-            theme, st_str, unix_start, unix_end = get_event_at_time(now_local)
-            embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
-            await channel.send(content=f"@everyone 🔥 **{theme.upper()} IS NOW LIVE!**", embeds=embeds)
-
-    except Exception as e:
-        print(f"❌ Error in schedule_check_loop: {e}")
-
-@schedule_check_loop.before_loop
-async def before_schedule_loop():
-    await bot.wait_until_ready()
-
-
-# ---------------------------------------------------------
-# 6. DISCORD SLASH COMMANDS
-# ---------------------------------------------------------
-@bot.event
-async def on_ready():
-    print(f"✅ Bot logged in as {bot.user.name}")
-    try:
-        synced = await bot.tree.sync()
-        print(f"📡 Synced {len(synced)} slash command(s) globally.")
-    except Exception as e:
-        print(f"❌ Failed to sync slash commands: {e}")
-        
-    if not schedule_check_loop.is_running():
-        schedule_check_loop.start()
-
-# Slash Command: /active_prep
-@bot.tree.command(name="active_prep", description="View the currently active prep phase and event tasks")
-async def active_prep_cmd(interaction: discord.Interaction):
-    theme, st_str, unix_start, unix_end = get_current_active_event()
-    embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
-    await interaction.response.send_message(content="🔥 **CURRENT ACTIVE PREP PHASE:**", embeds=embeds)
-
-# Slash Command: /next
-@bot.tree.command(name="next", description="Check the upcoming event phase and countdown")
-async def next_cmd(interaction: discord.Interaction):
-    now_local = datetime.datetime.now(UTC_MINUS_2)
-    cycle_hours = [0, 4, 8, 12, 16, 20]
-    current_hour = now_local.hour
-    
-    next_hour = next((h for h in cycle_hours if h > current_hour), cycle_hours[0])
-    next_date = now_local + datetime.timedelta(days=1) if next_hour <= current_hour else now_local
-
-    target_dt = datetime.datetime(next_date.year, next_date.month, next_date.day, next_hour, 0, tzinfo=UTC_MINUS_2)
-    theme, st_str, unix_start, unix_end = get_event_at_time(target_dt)
-    
-    mins_until = int((target_dt - now_local).total_seconds() // 60)
-    embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins_until)
-    
-    await interaction.response.send_message(content="📅 **UPCOMING PREP PHASE DETAILS:**", embeds=embeds)
-
-# Slash Command: /schedule
-@bot.tree.command(name="schedule", description="Display the full weekly prep phase schedule in your local time")
-async def schedule_cmd(interaction: discord.Interaction):
-    now_local = datetime.datetime.now(UTC_MINUS_2)
-    embed = discord.Embed(
-        title="🗓️ MASTER WEEKLY EVENT SCHEDULE",
-        description="Every 4-hour prep slot dynamically converted to your local device timezone.",
-        color=discord.Color.from_str("#2C3E50")
-    )
-
-    for day_offset in range(7):
-        target_day_dt = now_local + datetime.timedelta(days=day_offset)
-        weekday_idx = target_day_dt.weekday()
-        day_name = DAYS_MAP[weekday_idx]
-        
-        day_str = ""
-        for hour in [0, 4, 8, 12, 16, 20]:
-            slot_dt = datetime.datetime(target_day_dt.year, target_day_dt.month, target_day_dt.day, hour, 0, tzinfo=UTC_MINUS_2)
-            ts = int(slot_dt.astimezone(datetime.timezone.utc).timestamp())
-            theme = WEEKLY_SCHEDULE[weekday_idx][hour]
-            day_str += f"•  (): **{theme}**\n"
-
-        header = f"📅 {day_name}" if day_offset != 0 else f"📅 Today ({day_name})"
-        embed.add_field(name=header, value=day_str, inline=False)
-
-    embed.set_footer(text="Dark War Survival • Verified Data System")
-    await interaction.response.send_message(embed=embed)
-
-# Slash Command: /chest_calculator
-@bot.tree.command(name="chest_calculator", description="Calculate required speedups or item uses to unlock event chests")
-@app_commands.describe(
-    target_points="Target Chest (8000, 16000, 40000)",
-    action_type="Select action (Speedups, Wisdom Medals, Prime Recruits, Gears, Power Cores)"
-)
-@app_commands.choices(
-    target_points=[
-        app_commands.Choice(name="Chest 1 (8,000 pts - 590 Rubies)", value=8000),
-        app_commands.Choice(name="Chest 2 (16,000 pts - 1,200 Rubies)", value=16000),
-        app_commands.Choice(name="Chest 3 (40,000 pts - 2,950 Rubies)", value=40000)
-    ],
-    action_type=[
-        app_commands.Choice(name="1-Min Speedups (+5 pts)", value=5),
-        app_commands.Choice(name="Wisdom Medals (+5 pts)", value=5),
-        app_commands.Choice(name="Precision Parts (+300 pts)", value=300),
-        app_commands.Choice(name="Prime Recruits (+400 pts)", value=400),
-        app_commands.Choice(name="Exclusive Equip Fragments (+600 pts)", value=600),
-        app_commands.Choice(name="Orange Hero Fragments (+600 pts)", value=600),
-        app_commands.Choice(name="Power Cores (+450 pts)", value=450),
-        app_commands.Choice(name="Titanium Alloy (+180 pts)", value=180)
-    ]
-)
-async def chest_calc_cmd(interaction: discord.Interaction, target_points: app_commands.Choice[int], action_type: app_commands.Choice[int]):
-    required_count = math.ceil(target_points.value / action_type.value)
-    
-    embed = discord.Embed(
-        title="🧮 EVENT CHEST CALCULATOR",
-        color=discord.Color.brand_green()
-    )
-    embed.add_field(name="🎯 Target Goal", value=f"**{target_points.value:,} Points** ({target_points.name})", inline=False)
-    embed.add_field(name="⚡ Required Action", value=f"**{required_count:,}x** {action_type.name}", inline=False)
-    embed.set_footer(text="Dark War Survival • Quick Calculator")
-    
-    await interaction.response.send_message(embed=embed)
-
-# Slash Command: /set_prep_channel
-@bot.tree.command(name="set_prep_channel", description="Set the target text channel for automated event notifications")
-@app_commands.describe(channel="Select the text channel where event alerts should be sent.")
-@app_commands.default_permissions(administrator=True)
-async def set_prep_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-    global PREP_CHANNEL_ID
-    
-    if not interaction.user.guild_permissions.manage_channels and not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ You need **Manage Channels** or **Administrator** permissions to use this command.", ephemeral=True)
-        return
-
-    PREP_CHANNEL_ID = channel.id
-    save_channel_id(channel.id)
-    
-    embed = discord.Embed(
-        title="⚙️ Notification Channel Updated",
-        description=f"Automated prep alerts will now be sent to {channel.mention}.\nSetting saved permanently to `config.json`.",
-        color=discord.Color.green()
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-# Slash Command: /test
-@bot.tree.command(name="test", description="Test bot connectivity and latency")
-async def test_cmd(interaction: discord.Interaction):
-    latency = round(bot.latency * 1000)
-    embed = discord.Embed(
-        title="🤖 Bot Status: Operational",
-        description=f"**Ping Latency:** `{latency} ms`\n**Active Target Channel:** <#{PREP_CHANNEL_ID}>",
-        color=discord.Color.blue()
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-# ---------------------------------------------------------
-# 7. BOT RUNNER
-# ---------------------------------------------------------
-TOKEN = os.environ.get("DISCORD_TOKEN")
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("❌ Error: DISCORD_TOKEN environment variable not set.")
+        pre_alert_warning = (
+            f"```diff\n"
+            f"- 🔴 CAPITAL TITLE REQUIRED IN {mins_left} MINUTES!\n"
+            f"+ APPLY FOR [{title_name}] AT THE CAPITAL NOW!\n"
+            f"```\n"
+        )
+        embed_top.title = f"🚨 UPCOMING PREP: {icon} {theme.upper()}"
+        embed_top.description = (
+            f"{pre_alert_warning}"
+            f"> **Server Time Slot:** `{st_range}`\n"
+            f"> **Phase Starts:** {start_fmt} ({countdown_fmt})\n"
+            f"> **Phase Ends:** {end_fmt}"
+        )
+    else:
+        embed_top.title = f"{icon} ACTIVE PREP PHASE: {theme.upper()}"
+        embed_top.description = (
+            f"```yaml\n"
+            f"STATUS: ACTIVE EVENT IN PROGRESS\n"
+            f"SLOT  : {st_range}\n"
+            f"
