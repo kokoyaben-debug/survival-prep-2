@@ -10,13 +10,13 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 # ---------------------------------------------------------
-# 1. FLASK KEEP-ALIVE SERVER
+# 1. FLASK KEEP-ALIVE SERVER (24/7 Hosting Support)
 # ---------------------------------------------------------
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Dark War Prep Bot is Alive & Running 24/7!"
+    return "Dark War Prep Bot is Online & Running 24/7!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -26,7 +26,7 @@ threading.Thread(target=run_flask, daemon=True).start()
 
 
 # ---------------------------------------------------------
-# 2. CONFIGURATION & PERSISTENCE HELPERS
+# 2. PERSISTENT STORAGE & TIMEZONE HELPERS
 # ---------------------------------------------------------
 CONFIG_FILE = "config.json"
 MESSAGES_FILE = "active_messages.json"
@@ -70,7 +70,7 @@ PREP_CHANNEL_ID = config.get("PREP_CHANNEL_ID")
 
 
 # ---------------------------------------------------------
-# 3. BOT & CONSTANTS SETUP
+# 3. GAME DATA & CONSTANTS
 # ---------------------------------------------------------
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -102,7 +102,7 @@ ST_RANGES = {
 
 WEEKLY_SCHEDULE = {
     0: {0: "Shelter Expansion", 4: "Hero Initiative", 8: "Unit Training", 12: "Age of Science", 16: "Arms Expert", 20: "Shelter Expansion"},
-    1: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Expansion", 20: "Hero Initiative"},
+    1: {0: "Hero Initiative", 4: "Unit Training", 8: "Age of Science", 12: "Arms Expert", 16: "Shelter Expansion", 20: "Hero Initiative"},
     2: {0: "Unit Training", 4: "Age of Science", 8: "Arms Expert", 12: "Shelter Expansion", 16: "Hero Initiative", 20: "Unit Training"},
     3: {0: "Age of Science", 4: "Arms Expert", 8: "Shelter Expansion", 12: "Hero Initiative", 16: "Unit Training", 20: "Age of Science"},
     4: {0: "Arms Expert", 4: "Shelter Expansion", 8: "Hero Initiative", 12: "Unit Training", 16: "Age of Science", 20: "Arms Expert"},
@@ -155,7 +155,7 @@ TASK_DETAILS = {
 
 
 # ---------------------------------------------------------
-# 4. HELPER FUNCTIONS & EMBED BUILDERS
+# 4. EVENT CALCULATION & EMBED BUILDERS
 # ---------------------------------------------------------
 def get_event_at_time(dt_local: datetime.datetime):
     weekday = dt_local.weekday()
@@ -163,10 +163,9 @@ def get_event_at_time(dt_local: datetime.datetime):
     theme = WEEKLY_SCHEDULE.get(weekday, {}).get(hour_slot, "Survival Prep Phase")
     st_str = ST_RANGES.get(hour_slot, "00:00 – 04:00 ST")
     
-    # Calculate exact unix timestamps for Discord relative time markdown
     start_dt = datetime.datetime(dt_local.year, dt_local.month, dt_local.day, hour_slot, 0, tzinfo=UTC_MINUS_2)
     unix_start = int(start_dt.astimezone(datetime.timezone.utc).timestamp())
-    unix_end = unix_start + 14400  # +4 hours
+    unix_end = unix_start + 14400  # 4-hour duration
     return theme, st_str, unix_start, unix_end
 
 def get_current_active_event():
@@ -181,7 +180,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
     end_fmt = f""
     countdown_fmt = f"" if is_pre_alert else f""
 
-    # 1. TOP STATUS EMBED
+    # Embed 1: Active Status & Time Frame
     embed_top = discord.Embed(color=color)
     
     if is_pre_alert:
@@ -212,7 +211,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
         
     embed_top.set_footer(text="🌐 Dark War Survival • Timestamps auto-convert to your local device time")
 
-    # 2. BOTTOM TASK OBJECTIVES EMBED
+    # Embed 2: Scoring Objectives
     embed_bottom = discord.Embed(
         title=f"📋 SCORING OBJECTIVES — {theme}",
         color=color
@@ -228,7 +227,7 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
 
 
 # ---------------------------------------------------------
-# 5. AUTOMATED CLEANUP & SCHEDULE LOOP
+# 5. AUTOMATED LOOPS & AUTO-CLEANUP
 # ---------------------------------------------------------
 async def auto_clean_expired_alerts():
     """Deletes old phase announcements from channel after their 4-hour slot expires."""
@@ -241,7 +240,6 @@ async def auto_clean_expired_alerts():
     
     updated_list = []
     for msg_data in active_msgs:
-        # Delete if current time has passed the end timestamp
         if now_ts >= msg_data["expiry_ts"]:
             if channel:
                 try:
@@ -261,13 +259,12 @@ async def schedule_check_loop():
         now_local = datetime.datetime.now(UTC_MINUS_2)
         channel = bot.get_channel(PREP_CHANNEL_ID)
         
-        # Always run cleanup check
         await auto_clean_expired_alerts()
 
         if not channel:
             return
 
-        # Check 10-min and 5-min pre-alerts (Construction & Science ONLY)
+        # 10-min & 5-min Title Pre-Alerts (Construction & Science ONLY)
         for mins in [10, 5]:
             target_dt = now_local + datetime.timedelta(minutes=mins)
             if target_dt.minute == 0 and target_dt.hour in [0, 4, 8, 12, 16, 20]:
@@ -276,13 +273,12 @@ async def schedule_check_loop():
                     embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=True, mins_left=mins)
                     await channel.send(content=f"@everyone 👑 **{mins}-MINUTE CAPITAL TITLE ALERT!**", embeds=embeds)
 
-        # Check Live Phase Start (ALL Tasks)
+        # Live Phase Start Alerts (ALL 5 Tasks)
         if now_local.minute == 0 and now_local.hour in [0, 4, 8, 12, 16, 20]:
             theme, st_str, unix_start, unix_end = get_event_at_time(now_local)
             embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
             sent_msg = await channel.send(content=f"@everyone 🔥 **PREP PHASE LIVE: {theme.upper()} IS NOW ACTIVE!**", embeds=embeds)
             
-            # Save message ID for auto-deletion after end time
             active_list = load_active_messages()
             active_list.append({
                 "message_id": sent_msg.id,
@@ -320,14 +316,13 @@ async def active_prep_cmd(interaction: discord.Interaction):
     embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
     await interaction.response.send_message(content="⚡ **CURRENT ACTIVE EVENT STATUS:**", embeds=embeds)
 
-# Slash Command: /next (UPGRADED WITH DAY SCHEDULE & CURRENT/NEXT ARROWS)
-@bot.tree.command(name="next", description="Show full day's schedule with arrow pointing to the upcoming/active phase")
+# Slash Command: /next
+@bot.tree.command(name="next", description="Show full day schedule with arrow pointing to upcoming/active phase")
 async def next_cmd(interaction: discord.Interaction):
     now_local = datetime.datetime.now(UTC_MINUS_2)
     cycle_hours = [0, 4, 8, 12, 16, 20]
     current_hour = now_local.hour
     
-    # Determine next slot
     next_hour = next((h for h in cycle_hours if h > current_hour), cycle_hours[0])
     target_date = now_local + datetime.timedelta(days=1) if next_hour <= current_hour else now_local
 
@@ -345,10 +340,8 @@ async def next_cmd(interaction: discord.Interaction):
         theme = WEEKLY_SCHEDULE[weekday_idx][h]
         icon = PHASE_ICONS.get(theme, "🎯")
         
-        # Format time range as local discord timestamps
         time_str = f"–"
         
-        # Highlight next active hour with arrow
         if h == next_hour and target_date.date() == next_dt.date():
             schedule_lines.append(f"▶ **{time_str}** — **{icon} {theme}** *(UPCOMING)*")
         elif h <= current_hour and target_date.date() == now_local.date() and (current_hour - h) < 4:
@@ -372,7 +365,7 @@ async def next_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 # Slash Command: /schedule
-@bot.tree.command(name="schedule", description="Display full 7-day weekly prep schedule")
+@bot.tree.command(name="schedule", description="Display full 7-day master weekly prep schedule")
 async def schedule_cmd(interaction: discord.Interaction):
     now_local = datetime.datetime.now(UTC_MINUS_2)
     embed = discord.Embed(
