@@ -160,23 +160,10 @@ TASK_DETAILS = {
 # ---------------------------------------------------------
 def get_support_view(bot_id: int) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
-    
     invite_url = f"https://discord.com/oauth2/authorize?client_id={bot_id}&permissions=274878024704&scope=bot%20applications.commands"
     
-    view.add_item(discord.ui.Button(
-        label="Add to Server",
-        url=invite_url,
-        style=discord.ButtonStyle.link,
-        emoji="➕"
-    ))
-    
-    view.add_item(discord.ui.Button(
-        label="Support on Ko-fi",
-        url=KOFI_URL,
-        style=discord.ButtonStyle.link,
-        emoji="☕"
-    ))
-    
+    view.add_item(discord.ui.Button(label="Add to Server", url=invite_url, style=discord.ButtonStyle.link, emoji="➕"))
+    view.add_item(discord.ui.Button(label="Support on Ko-fi", url=KOFI_URL, style=discord.ButtonStyle.link, emoji="☕"))
     return view
 
 async def fetch_channel_safe(channel_id: int) -> discord.TextChannel | None:
@@ -216,7 +203,6 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
     countdown_fmt = f"<t:{unix_start}:R>" if is_pre_alert else f"<t:{unix_end}:R>"
 
     embed_top = discord.Embed(color=color)
-    
     if is_pre_alert:
         title_name = "SECRETARY OF CONSTRUCTION" if theme == "Shelter Expansion" else "SECRETARY OF SCIENCE"
         pre_alert_warning = (
@@ -252,7 +238,6 @@ def build_two_embed_stack(theme: str, st_range: str, unix_start: int, unix_end: 
     
     tasks = TASK_DETAILS.get(theme, ["Complete event tasks to gain points!"])
     task_list_str = "\n".join([f"• {item}" if not item.startswith("  ") else item for item in tasks])
-    
     embed_bottom.description = f"Maximized point sources for this 4-hour window:\n\n{task_list_str}"
     embed_bottom.set_footer(text="💡 Tip: Apply capital titles before claiming completed achievements.")
 
@@ -297,13 +282,11 @@ async def schedule_check_loop():
 
         bot_id = bot.user.id if bot.user else 0
 
-        # Broadcast to all configured channels across all servers
         for guild_id_str, channel_id in guild_channels.items():
             channel = await fetch_channel_safe(channel_id)
             if not channel:
                 continue
 
-            # 10-min & 5-min Title Pre-Alerts (Construction & Science ONLY)
             for mins in [10, 5]:
                 target_dt = now_local + datetime.timedelta(minutes=mins)
                 if target_dt.minute == 0 and target_dt.hour in [0, 4, 8, 12, 16, 20]:
@@ -313,7 +296,6 @@ async def schedule_check_loop():
                         view = get_support_view(bot_id)
                         await channel.send(content=f"@everyone 👑 **{mins}-MINUTE CAPITAL TITLE ALERT!**", embeds=embeds, view=view)
 
-            # Live Phase Start Alerts (ALL 5 Tasks)
             if now_local.minute == 0 and now_local.hour in [0, 4, 8, 12, 16, 20]:
                 theme, st_str, unix_start, unix_end = get_event_at_time(now_local)
                 embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
@@ -354,17 +336,55 @@ async def on_ready():
 # Slash Command: /active_prep
 @bot.tree.command(name="active_prep", description="View the currently active prep phase, remaining time, and tasks")
 async def active_prep_cmd(interaction: discord.Interaction):
+    await interaction.response.defer()
     theme, st_str, unix_start, unix_end = get_current_active_event()
     embeds = build_two_embed_stack(theme, st_str, unix_start, unix_end, is_pre_alert=False)
     view = get_support_view(bot.user.id)
-    await interaction.response.send_message(content="⚡ **CURRENT ACTIVE EVENT STATUS:**", embeds=embeds, view=view)
+    await interaction.followup.send(content="⚡ **CURRENT ACTIVE EVENT STATUS:**", embeds=embeds, view=view)
 
 # Slash Command: /next
 @bot.tree.command(name="next", description="Show full day schedule with arrow pointing to upcoming/active phase")
 async def next_cmd(interaction: discord.Interaction):
+    await interaction.response.defer()
     now_local = datetime.datetime.now(UTC_MINUS_2)
     cycle_hours = [0, 4, 8, 12, 16, 20]
     current_hour = now_local.hour
     
     next_hour = next((h for h in cycle_hours if h > current_hour), cycle_hours[0])
-    target_date = now_local + datetime.timedelta(days=1) if next_
+    target_date = now_local + datetime.timedelta(days=1) if next_hour <= current_hour else now_local
+
+    weekday_idx = target_date.weekday()
+    day_name = DAYS_MAP[weekday_idx]
+    
+    next_dt = datetime.datetime(target_date.year, target_date.month, target_date.day, next_hour, 0, tzinfo=UTC_MINUS_2)
+    next_theme, _, next_start_ts, _ = get_event_at_time(next_dt)
+
+    schedule_lines = []
+    for h in cycle_hours:
+        slot_dt = datetime.datetime(target_date.year, target_date.month, target_date.day, h, 0, tzinfo=UTC_MINUS_2)
+        start_ts = int(slot_dt.astimezone(datetime.timezone.utc).timestamp())
+        end_ts = start_ts + 14400
+        theme = WEEKLY_SCHEDULE[weekday_idx][h]
+        icon = PHASE_ICONS.get(theme, "🎯")
+        
+        time_str = f"<t:{start_ts}:t>–<t:{end_ts}:t>"
+        
+        if h == next_hour and target_date.date() == next_dt.date():
+            schedule_lines.append(f"▶ **{time_str}** — **{icon} {theme}** *(UPCOMING)*")
+        elif h <= current_hour and target_date.date() == now_local.date() and (current_hour - h) < 4:
+            schedule_lines.append(f"⚡ **{time_str}** — **{icon} {theme}** *(ACTIVE NOW)*")
+        else:
+            schedule_lines.append(f"• `{time_str}` — {icon} {theme}")
+
+    schedule_block = "\n".join(schedule_lines)
+    
+    embed = discord.Embed(
+        title=f"📅 UPCOMING SCHEDULE — {day_name.upper()}",
+        description=(
+            f"**Next Phase:** {PHASE_ICONS.get(next_theme, '🎯')} **{next_theme}**\n"
+            f"**Countdown:** Phase starts <t:{next_start_ts}:R>\n\n"
+            f"### 🗓️ Day Schedule Overview:\n{schedule_block}"
+        ),
+        color=PHASE_COLORS.get(next_theme, discord.Color.blue())
+    )
+    embed.set_footer(text="🌐 Dark War Survival
