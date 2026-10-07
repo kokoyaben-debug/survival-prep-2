@@ -387,4 +387,137 @@ async def next_cmd(interaction: discord.Interaction):
         ),
         color=PHASE_COLORS.get(next_theme, discord.Color.blue())
     )
-    embed.set_footer(text="🌐 Dark War Survival
+    embed.set_footer(text="🌐 Dark War Survival • All times auto-sync to your timezone")
+
+    view = get_support_view(bot.user.id)
+    await interaction.followup.send(embed=embed, view=view)
+
+# Slash Command: /schedule
+@bot.tree.command(name="schedule", description="Display full 7-day master weekly prep schedule")
+async def schedule_cmd(interaction: discord.Interaction):
+    await interaction.response.defer()
+    now_local = datetime.datetime.now(UTC_MINUS_2)
+    embed = discord.Embed(
+        title="🗓️ MASTER WEEKLY PREP SCHEDULE",
+        description="Dynamic 4-hour prep slots auto-synced to your device timezone.",
+        color=discord.Color.from_str("#2C3E50")
+    )
+
+    for day_offset in range(7):
+        target_day_dt = now_local + datetime.timedelta(days=day_offset)
+        weekday_idx = target_day_dt.weekday()
+        day_name = DAYS_MAP[weekday_idx]
+        
+        day_str = ""
+        for hour in [0, 4, 8, 12, 16, 20]:
+            slot_dt = datetime.datetime(target_day_dt.year, target_day_dt.month, target_day_dt.day, hour, 0, tzinfo=UTC_MINUS_2)
+            ts = int(slot_dt.astimezone(datetime.timezone.utc).timestamp())
+            theme = WEEKLY_SCHEDULE[weekday_idx][hour]
+            icon = PHASE_ICONS.get(theme, "🎯")
+            day_str += f"`<t:{ts}:t>` {icon} **{theme}**\n"
+
+        header = f"📅 {day_name}" if day_offset != 0 else f"📅 TODAY ({day_name})"
+        embed.add_field(name=header, value=day_str, inline=True)
+
+    embed.set_footer(text="Dark War Survival • Master Schedule System")
+
+    view = get_support_view(bot.user.id)
+    await interaction.followup.send(embed=embed, view=view)
+
+# Slash Command: /chest_calculator
+@bot.tree.command(name="chest_calculator", description="Calculate required items/speedups to hit target chest milestones")
+@app_commands.describe(
+    target_points="Target Chest Milestone",
+    action_type="Select point action type"
+)
+@app_commands.choices(
+    target_points=[
+        app_commands.Choice(name="Chest 1 (8,000 pts - 590 Rubies)", value=8000),
+        app_commands.Choice(name="Chest 2 (16,000 pts - 1,200 Rubies)", value=16000),
+        app_commands.Choice(name="Chest 3 (40,000 pts - 2,950 Rubies)", value=40000)
+    ],
+    action_type=[
+        app_commands.Choice(name="1-Min Speedups (+5 pts)", value=5),
+        app_commands.Choice(name="Wisdom Medals (+5 pts)", value=5),
+        app_commands.Choice(name="Precision Parts (+300 pts)", value=300),
+        app_commands.Choice(name="Prime Recruits (+400 pts)", value=400),
+        app_commands.Choice(name="Exclusive Equip Fragments (+600 pts)", value=600),
+        app_commands.Choice(name="Orange Hero Fragments (+600 pts)", value=600),
+        app_commands.Choice(name="Power Cores (+450 pts)", value=450),
+        app_commands.Choice(name="Titanium Alloy (+180 pts)", value=180)
+    ]
+)
+async def chest_calc_cmd(interaction: discord.Interaction, target_points: app_commands.Choice[int], action_type: app_commands.Choice[int]):
+    await interaction.response.defer()
+    required_count = math.ceil(target_points.value / action_type.value)
+    
+    embed = discord.Embed(
+        title="🧮 EVENT CHEST CALCULATOR",
+        color=discord.Color.brand_green()
+    )
+    embed.add_field(name="🎯 Target Goal", value=f"**{target_points.value:,} Points**\n`{target_points.name}`", inline=False)
+    embed.add_field(name="⚡ Required Action", value=f"**{required_count:,}x** `{action_type.name}`", inline=False)
+    embed.set_footer(text="Dark War Survival • Point Calculator")
+    
+    view = get_support_view(bot.user.id)
+    await interaction.followup.send(embed=embed, view=view)
+
+# Slash Command: /set_prep_channel
+@bot.tree.command(name="set_prep_channel", description="Set text channel for automated notifications in this server")
+@app_commands.describe(channel="Select channel for event alerts")
+async def set_prep_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    await interaction.response.defer(ephemeral=True)
+
+    if not interaction.guild:
+        await interaction.followup.send("❌ This command must be run inside a Discord server.")
+        return
+
+    perms = interaction.permissions
+    if not perms or not (perms.administrator or perms.manage_channels):
+        await interaction.followup.send("❌ Requires **Manage Channels** or **Administrator** permissions.")
+        return
+
+    guild_id_str = str(interaction.guild.id)
+    if "guild_channels" not in config:
+        config["guild_channels"] = {}
+
+    config["guild_channels"][guild_id_str] = channel.id
+    save_config(config)
+    
+    embed = discord.Embed(
+        title="⚙️ Notification Channel Configured",
+        description=f"Automated prep alerts for **{interaction.guild.name}** will now be sent to {channel.mention}.\nSaved to `config.json`.",
+        color=discord.Color.green()
+    )
+    bot_id = bot.user.id if bot.user else 0
+    view = get_support_view(bot_id)
+    await interaction.followup.send(embed=embed, view=view)
+
+# Slash Command: /test
+@bot.tree.command(name="test", description="Test bot status and active channel setting for this server")
+async def test_cmd(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    latency = round(bot.latency * 1000)
+    guild_id_str = str(interaction.guild.id) if interaction.guild else None
+    configured_channel_id = config.get("guild_channels", {}).get(guild_id_str)
+    
+    channel_info = f"<#{configured_channel_id}>" if configured_channel_id else "*Not configured yet! Run `/set_prep_channel`.*"
+
+    embed = discord.Embed(
+        title="🤖 Bot Status: Online & Ready",
+        description=f"> **Latency:** `{latency} ms`\n> **Target Channel for this Server:** {channel_info}",
+        color=discord.Color.blue()
+    )
+    bot_id = bot.user.id if bot.user else 0
+    view = get_support_view(bot_id)
+    await interaction.followup.send(embed=embed, view=view)
+
+
+# ---------------------------------------------------------
+# 8. BOT RUNNER
+# ---------------------------------------------------------
+TOKEN = os.environ.get("DISCORD_TOKEN")
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("❌ Error: DISCORD_TOKEN environment variable not set.")
